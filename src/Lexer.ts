@@ -26,13 +26,19 @@ export default class Lexer {
 		for (let tokenType of tokenTypesValues) {
 			let regex = new RegExp(`^${tokenType.regex}`)
       const result = this.code.substring(this.pos).match(regex);
+			
 			if (result && result[0]) {
-				const token = new Token(tokenType, result[0], this.pos);
+				let token;
+				if (tokenType === tokenTypeList.STRING) {
+					token = new Token(tokenType, result[0].slice(1, -1), this.pos)
+				} else {
+					token = new Token(tokenType, result[0], this.pos)
+				}
 				this.pos += result[0].length;
 				this.tokenList.push(token);
 				return true;
 			}
 		}
-		throw new Error(`На позиции ${this.pos} обнаружена ошибка`);
+		throw new Error(`Error at position: ${this.pos}`);
 	}
 }

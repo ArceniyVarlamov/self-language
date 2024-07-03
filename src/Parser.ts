@@ -1,9 +1,18 @@
 import BinOperationNode from "./ASC/BinOperationNode";
+import ConditionNode from "./ASC/ConditionNode";
 import ExpressionNode from "./ASC/ExpressionNode";
 import NumberNode from "./ASC/NumberNode";
 import StatementsNode from "./ASC/StatementsNode";
+import StringNode from "./ASC/StringNode";
 import UnarOperationNode from "./ASC/UnarOperationNode";
 import VariableNode from "./ASC/VariableNode";
+import parseCode from "./ExpressionsParsers/parseCode";
+import parseCondition from "./ExpressionsParsers/parseCondition";
+import parseExpression from "./ExpressionsParsers/parseExpression";
+import parseFormula from "./ExpressionsParsers/parseFormula";
+import parseParentheses from "./ExpressionsParsers/parseParentheses";
+import parsePrint from "./ExpressionsParsers/parsePrint";
+import parseVariableOrNumberOrString from "./ExpressionsParsers/parseVariableOrNumberOrString";
 import Token from "./Token";
 import { TokenType, tokenTypeList } from "./TokenType";
 
@@ -40,96 +49,19 @@ export class Parser {
 	require(...expected: TokenType[]): Token {
     const token = this.match(...expected)
     if (!token) {
-      throw new Error(`Expected ${expected} at position: ${this.pos}`);
+      throw new Error(`Expected ${expected[0].name} at position: ${this.pos}`);
     }
     return token
   }
 
-  // Парсит каждую строку кода (до ;)
-  parseCode(): ExpressionNode {
-    // Переменная, в которой хранятся строчки кода (до разделителя ;)
-    const root = new StatementsNode()
-    while (this.pos < this.tokens.length) {
-      const codeStringNode = this.parseExpression()
-      this.require(tokenTypeList.SEMICOLON)
-      root.addNode(codeStringNode)
-    }
-    return root
-  }
-
-  // Парсит (проверят) строчку кода
-  // Здесь и находится вся логика языка программирования
-  parseExpression(): ExpressionNode {
-    // Если не переменная, то возможно только LOG в начале
-    if (this.match(tokenTypeList.VARIABLE) == null) {
-      const printNode = this.parsePrint()
-      return printNode
-    }
-    // Если всё же переменная, то сдвигаем позицию на 1 влево, т.к. match сдвинул
-    // её вправо, а нам нужно записать эту переменную
-    this.pos -= 1
-    // Записали переменную (можно и число, но это ни на что не повлияет)
-    const variableNode = this.parseVariableOrNumber()
-    // Находим знак =
-    const assignOperator = this.match(tokenTypeList.ASSIGN)
-    if (assignOperator != null) {
-      // Парсим правый операнд (формула)
-      const rightFormulaNode = this.parseFormula()
-      // Записываем узел как бинарную операцию (с 2 операндами и оператором)
-      const binaryNode = new BinOperationNode(assignOperator, variableNode, rightFormulaNode)
-      return binaryNode
-    }
-    // Иначе всплывает ошибка
-    throw new Error(`Expected assign operator at position: ${this.pos}`);
-  }
-
-  // Парсит переменные или числа
-  parseVariableOrNumber(): ExpressionNode {
-    const number = this.match(tokenTypeList.NUMBER)
-    if (number != null) {
-      return new NumberNode(number)
-    }
-    const variable = this.match(tokenTypeList.VARIABLE)
-    if (variable != null) {
-      return new VariableNode(variable)
-    }
-    throw new Error(`Expected number or variable at position: ${this.pos}`);
-  }
-
-  // Парсит формулы, создаёт дерево (используя своеобразную рекурсию). 
-  // Формулы подразумевают в себе переменные, цифры, скобки.
-  parseFormula(): ExpressionNode {
-    let leftNode = this.parseParentheses()
-    let operator = this.match(tokenTypeList.PLUS, tokenTypeList.MINUS)
-    while (operator != null) {
-      let rightNode = this.parseParentheses()
-      leftNode = new BinOperationNode(operator, leftNode, rightNode)
-      operator = this.match(tokenTypeList.PLUS, tokenTypeList.MINUS)
-    }
-    return leftNode
-  }
-
-  // Парсит выражения в скобках
-  parseParentheses(): ExpressionNode {
-    if (this.match(tokenTypeList.LPAR) != null) {
-      const node = this.parseFormula()
-      this.require(tokenTypeList.RPAR)
-      return node
-    } else {
-      return this.parseVariableOrNumber()
-    }
-  }
-
-  // Парсит выражения с выводом строк (Print)
-  parsePrint(): ExpressionNode {
-    const operator = this.match(tokenTypeList.LOG)
-    if (operator != null) {
-      return new UnarOperationNode(operator, this.parseFormula())
-    }
-    throw new Error(`Expected unar operator at position: ${this.pos}`);
-  }
-
   run(node: ExpressionNode): any {
+    if (node instanceof ConditionNode) {
+      if (this.run(node.condition)) {
+        this.run(node.thenBrench)
+      }
+      return
+    }
+
     if (node instanceof StatementsNode) {
       node.codeStrings.forEach(codeString => {
           this.run(codeString);
@@ -141,17 +73,28 @@ export class Parser {
       return parseInt(node.number.text)
     }
 
+    if (node instanceof StringNode) {
+      return node.string.text.toString()
+    }
+
     if (node instanceof BinOperationNode) {
       switch (node.operator.type.name) {
         case tokenTypeList.ASSIGN.name:
           const leftSide = <VariableNode>node.leftNode
           const rightSide = this.run(node.rightNode)
+
           this.scope[leftSide.variable.text] = rightSide;
           return rightSide
         case tokenTypeList.MINUS.name:
           return this.run(node.leftNode) - this.run(node.rightNode)
         case tokenTypeList.PLUS.name:
           return this.run(node.leftNode) + this.run(node.rightNode)
+        case tokenTypeList.ASSIGNCHECK.name:
+          if (this.run(node.leftNode) == this.run(node.rightNode)) {
+            return this.run(node.leftNode)
+          } else {
+            return false
+          }
       }
     }
 
