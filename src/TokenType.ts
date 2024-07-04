@@ -9,6 +9,12 @@ export class TokenType {
 }
 
 export const tokenTypeList = {
+  'ELSE': new TokenType('ELSE', 'else\\b(?=\\s*:)'),
+  'ELIF': new TokenType('ELIF', 'elif '),
+  'IF': new TokenType('IF', 'if '),
+  'AND': new TokenType('AND', 'and '),
+  'OR': new TokenType('OR', 'or '),
+  'LOG': new TokenType('LOG', 'log'),
   'LPAR': new TokenType('LPAR', '\\('),
   'RPAR': new TokenType('RPAR', '\\)'),
   'GREATEROREQUAL': new TokenType('GREATEROREQUAL', '\\>='),
@@ -17,9 +23,7 @@ export const tokenTypeList = {
   'LESS': new TokenType('LESS', '\\<'),
   'STRING': new TokenType('STRING', '"[a-z | 0-9]*"'),
   'ASSIGNCHECK': new TokenType('ASSIGNCHECK', '\\=='),
-  'IF': new TokenType('IF', 'if '),
   'DO': new TokenType('DO', '\\:'),
-  'LOG': new TokenType('LOG', 'log'),
   'NUMBER': new TokenType('NUMBER', '[0-9]*'),
   'VARIABLE': new TokenType('VARIABLE', '[a-z]*'),
   'SEMICOLON': new TokenType('SEMICOLON', ';'),

@@ -16,9 +16,9 @@ import parseVariableOrNumberOrString from "./ExpressionsParsers/parseVariableOrN
 import Token from "./Token";
 import { TokenType, tokenTypeList } from "./TokenType";
 
-// Что такое узел (node) 
+// Что такое узел (node)
 // Это дерево, которое создаётся на основе parser. Каждый узел дерева
-// проходит через функцию и в зависимости от класса к которому он 
+// проходит через функцию и в зависимости от класса к которому он
 // принадлежит (instanse of), выполняется определённое действие.
 // В стандартных (компилируемых) языках программирования эти действия
 // выполняет сам цп.
@@ -32,88 +32,135 @@ export class Parser {
 		this.tokens = tokens;
 	}
 
-  // Проверка на содержание определённого токена в цепи токенов узла программы
+	// Проверка на содержание определённого токена в цепи токенов узла программы
 	match(...expected: TokenType[]): Token | null {
 		if (this.pos < this.tokens.length) {
 			const currToken = this.tokens[this.pos];
-			if (expected.find(item => item.name === currToken.type.name)) {
+			if (expected.find((item) => item.name === currToken.type.name)) {
 				this.pos += 1;
-        return currToken
+				return currToken;
 			}
 		}
-    return null
+		return null;
 	}
 
-  // Проверка на существование, чтобы  всегда возвращался Token
-  // Вызывает ошибку если что-то не так
+	// Проверка на существование, чтобы  всегда возвращался Token
+	// Вызывает ошибку если что-то не так
 	require(...expected: TokenType[]): Token {
-    const token = this.match(...expected)
-    if (!token) {
-      throw new Error(`Expected ${expected[0].name} at position: ${this.pos}`);
-    }
-    return token
-  }
+		const token = this.match(...expected);
+		if (!token) {
+			throw new Error(`Expected ${expected[0].name} at position: ${this.pos}`);
+		}
+		return token;
+	}
 
-  run(node: ExpressionNode): any {
-    if (node instanceof ConditionNode) {
-      if (this.run(node.condition)) {
-        this.run(node.thenBrench)
-      }
-      return
-    }
+	run(node: ExpressionNode): any {
+		if (node instanceof ConditionNode) {
+			console.log(node);
 
-    if (node instanceof StatementsNode) {
-      node.codeStrings.forEach(codeString => {
-          this.run(codeString);
-      })
-      return;
-    }
+			if (this.run(node.condition)) {
+				this.run(node.thenBrench);
+				return;
+			}
+			if (node.elifBrenches) {
+				for (let elif of node.elifBrenches) {
+					if (this.run(elif.condition)) {
+						this.run(elif);
+						return;
+					}
+				}
+			}
+			if (node.isElse && node.elseBrench) {
+				this.run(node.elseBrench);
+			}
+			return;
+		}
 
-    if (node instanceof NumberNode) {
-      return parseInt(node.number.text)
-    }
+		if (node instanceof StatementsNode) {
+			node.codeStrings.forEach((codeString) => {
+				this.run(codeString);
+			});
+			return;
+		}
 
-    if (node instanceof StringNode) {
-      return node.string.text.toString()
-    }
+		if (node instanceof NumberNode) {
+			return parseInt(node.number.text);
+		}
 
-    if (node instanceof BinOperationNode) {
-      switch (node.operator.type.name) {
-        case tokenTypeList.ASSIGN.name:
-          const leftSide = <VariableNode>node.leftNode
-          const rightSide = this.run(node.rightNode)
+		if (node instanceof StringNode) {
+			return node.string.text.toString();
+		}
 
-          this.scope[leftSide.variable.text] = rightSide;
-          return rightSide
-        case tokenTypeList.MINUS.name:
-          return this.run(node.leftNode) - this.run(node.rightNode)
-        case tokenTypeList.PLUS.name:
-          return this.run(node.leftNode) + this.run(node.rightNode)
-        case tokenTypeList.ASSIGNCHECK.name:
-          if (this.run(node.leftNode) == this.run(node.rightNode)) {
-            return this.run(node.leftNode)
-          } else {
-            return false
-          }
-      }
-    }
+		if (node instanceof BinOperationNode) {
+			switch (node.operator.type.name) {
+				case tokenTypeList.ASSIGN.name:
+					const leftSide = <VariableNode>node.leftNode;
+					const rightSide = this.run(node.rightNode);
 
-    if (node instanceof VariableNode) {
-      if (this.scope[node.variable.text]) {
-        return this.scope[node.variable.text]
-      } else {
-        throw new Error(`No such variable: ${node.variable.text}`);
-      }
-    }
-    
-    if (node instanceof UnarOperationNode) {
-      switch (node.operator.type.name) {
-        case tokenTypeList.LOG.name:
-          console.log(this.run(node.operand));
-          return
-      }
-    }
-    throw new Error("Error");
-    
-  }
+					this.scope[leftSide.variable.text] = rightSide;
+					return rightSide;
+				case tokenTypeList.MINUS.name:
+					return this.run(node.leftNode) - this.run(node.rightNode);
+				case tokenTypeList.PLUS.name:
+					return this.run(node.leftNode) + this.run(node.rightNode);
+				case tokenTypeList.ASSIGNCHECK.name:
+					if (this.run(node.leftNode) == this.run(node.rightNode)) {
+						return this.run(node.leftNode);
+					} else {
+						return false;
+					}
+				case tokenTypeList.GREATER.name:
+					if (this.run(node.leftNode) > this.run(node.rightNode)) {
+						return true;
+					} else {
+						return false;
+					}
+				case tokenTypeList.GREATEROREQUAL.name:
+					if (this.run(node.leftNode) >= this.run(node.rightNode)) {
+						return true;
+					} else {
+						return false;
+					}
+				case tokenTypeList.LESS.name:
+					if (this.run(node.leftNode) < this.run(node.rightNode)) {
+						return true;
+					} else {
+						return false;
+					}
+				case tokenTypeList.LESSOREQUAL.name:
+					if (this.run(node.leftNode) <= this.run(node.rightNode)) {
+						return true;
+					} else {
+						return false;
+					}
+				case tokenTypeList.AND.name:
+					if (this.run(node.leftNode) && this.run(node.rightNode)) {
+						return true;
+					}
+					return false;
+				case tokenTypeList.OR.name:
+					if (this.run(node.leftNode) || this.run(node.rightNode)) {
+						return true;
+					}
+					return false;
+			}
+		}
+
+		if (node instanceof VariableNode) {
+			if (this.scope[node.variable.text]) {
+				return this.scope[node.variable.text];
+			} else {
+				throw new Error(`No such variable: ${node.variable.text}`);
+			}
+		}
+
+		if (node instanceof UnarOperationNode) {
+			switch (node.operator.type.name) {
+				case tokenTypeList.LOG.name:
+					console.log(this.run(node.operand));
+					return;
+			}
+		}
+		throw new Error("Error");
+	}
 }

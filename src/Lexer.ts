@@ -31,7 +31,10 @@ export default class Lexer {
 				let token;
 				if (tokenType === tokenTypeList.STRING) {
 					token = new Token(tokenType, result[0].slice(1, -1), this.pos)
-				} else {
+				} else if (tokenType === tokenTypeList.ELIF) {
+					token = new Token(tokenType, result[0].slice(0, -1), this.pos)
+				}
+				else {
 					token = new Token(tokenType, result[0], this.pos)
 				}
 				this.pos += result[0].length;

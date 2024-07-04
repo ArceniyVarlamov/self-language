@@ -8,11 +8,38 @@ import ConditionNode from "../ASC/ConditionNode";
 // if var + 5 == (var2 == var3)
 const parseCondition = (parser: Parser): ExpressionNode | void => {
 	const conditionOperator = parser.match(tokenTypeList.IF);
+	let elifBrenches: ConditionNode[] = [];
 	if (conditionOperator !== null) {
 		const condition = parseFormula(parser);
-		const doOperator = parser.require(tokenTypeList.DO);
+		parser.require(tokenTypeList.DO);
 		const thenBrench = parseExpression(parser);
-    return new ConditionNode(conditionOperator, condition, doOperator, thenBrench)
+		let elifOperator = parser.match(tokenTypeList.ELIF);
+		while (elifOperator !== null) {
+			const elifCondition = parseFormula(parser);
+			parser.require(tokenTypeList.DO);
+			const elifThenBrench = parseExpression(parser);
+			elifBrenches.push(
+				new ConditionNode(
+					elifOperator,
+					elifCondition,
+					elifThenBrench,
+				),
+			);
+			elifOperator = parser.match(tokenTypeList.ELIF);
+		}
+		const elseOperator = parser.match(tokenTypeList.ELSE);
+		let elseThenBrench;
+		if (elseOperator !== null) {
+			parser.require(tokenTypeList.DO);
+			elseThenBrench = parseExpression(parser);
+		}
+		return new ConditionNode(
+			conditionOperator,
+			condition,
+			thenBrench,
+			elifBrenches,
+			elseThenBrench
+		);
 	}
 };
 

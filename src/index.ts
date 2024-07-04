@@ -5,8 +5,7 @@ import { Parser } from "./Parser";
 
 const code =
 `
-var = 2;
-if 2 == 2 == var: log "4";
+if (1 < 2) and (2 == 2): log "1";
 `
 
 const lexer = new Lexer(code);
